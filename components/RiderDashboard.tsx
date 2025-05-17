@@ -1,27 +1,31 @@
 "use client";
 import { useState } from "react";
 import { useDeliveryStore } from "@/store/deliveryStore";
+import { useUserStore } from "@/store/userStore";
+import { useAccount } from "wagmi";
 import Link from "next/link";
 
 export default function RiderDashboard() {
-  const [riderId, setRiderId] = useState("");
-
   const deliveries = useDeliveryStore((state) => state.deliveries);
   const acceptDelivery = useDeliveryStore((state) => state.acceptDelivery);
   const completeDelivery = useDeliveryStore((state) => state.completeDelivery);
   const disputeDelivery = useDeliveryStore((state) => state.disputeDelivery);
+  const { role } = useUserStore();
+  const { address, isConnected } = useAccount();
 
   const availableDeliveries = deliveries.filter((d) => d.status === "Created");
   const activeDeliveries = deliveries.filter(
-    (d) => d.status === "Accepted" && d.riderId === riderId
+    (d) => d.status === "Accepted" && d.riderId === address
   );
 
   const handleAcceptDelivery = (deliveryId: number) => {
-    if (!riderId.trim()) {
-      alert("Please enter your Rider ID first");
+    if (!isConnected || !address || role !== "rider") {
+      alert(
+        "You must be connected and logged in as a rider to accept deliveries."
+      );
       return;
     }
-    acceptDelivery(deliveryId, riderId);
+    acceptDelivery(deliveryId, address);
   };
 
   const handleCompleteDelivery = (deliveryId: number) => {
@@ -32,40 +36,18 @@ export default function RiderDashboard() {
     disputeDelivery(deliveryId);
   };
 
+  if (role !== "rider" || !isConnected) {
+    return (
+      <div className="p-4 border rounded bg-gray-50 text-gray-500 text-center">
+        Please connect your wallet and log in as a{" "}
+        <span className="font-semibold">Rider</span> to view and accept
+        deliveries.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      {/* Rider ID Setup */}
-      <section className="bg-blue-50 p-4 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">Rider Setup</h2>
-        {!riderId ? (
-          <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="Enter your Rider ID"
-              value={riderId}
-              onChange={(e) => setRiderId(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-            <button
-              onClick={() => setRiderId(riderId)}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              Set Rider ID
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <p>
-              <strong>Rider ID:</strong> {riderId}
-            </p>
-            <button
-              onClick={() => setRiderId("")}
-              className="text-red-600 hover:text-red-800">
-              Change
-            </button>
-          </div>
-        )}
-      </section>
-
       {/* Available Deliveries */}
       <section>
         <h2 className="text-lg font-semibold mb-2">Available Deliveries</h2>

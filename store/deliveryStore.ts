@@ -5,12 +5,13 @@ interface Delivery {
   receiver: string;
   amount: number;
   status: "Created" | "Accepted" | "Completed" | "Disputed";
+  senderId: string;
   riderId?: string;
 }
 
 interface DeliveryState {
   deliveries: Delivery[];
-  createDelivery: (receiver: string, amount: number) => void;
+  createDelivery: (receiver: string, amount: number, senderId: string) => void;
   acceptDelivery: (deliveryId: number, riderId: string) => void;
   completeDelivery: (deliveryId: number) => void;
   disputeDelivery: (deliveryId: number) => void;
@@ -18,12 +19,13 @@ interface DeliveryState {
 
 export const useDeliveryStore = create<DeliveryState>((set, get) => ({
   deliveries: [],
-  createDelivery: (receiver, amount) => {
+  createDelivery: (receiver, amount, senderId) => {
     const newDelivery = {
       id: get().deliveries.length + 1,
       receiver,
       amount,
       status: "Created" as const,
+      senderId,
     };
     set((state) => ({ deliveries: [...state.deliveries, newDelivery] }));
   },

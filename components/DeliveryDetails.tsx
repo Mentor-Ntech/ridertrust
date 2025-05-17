@@ -1,29 +1,31 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useDeliveryStore } from "@/store/deliveryStore";
-import { useState } from "react";
+import { useUserStore } from "@/store/userStore";
+import { useAccount } from "wagmi";
 import Link from "next/link";
 
 export default function DeliveryDetails() {
   const { id } = useParams();
-  const [riderId, setRiderId] = useState("");
-
   const delivery = useDeliveryStore((state) =>
     state.deliveries.find((d) => d.id === Number(id))
   );
-
   const acceptDelivery = useDeliveryStore((state) => state.acceptDelivery);
   const completeDelivery = useDeliveryStore((state) => state.completeDelivery);
   const disputeDelivery = useDeliveryStore((state) => state.disputeDelivery);
+  const { role } = useUserStore();
+  const { address, isConnected } = useAccount();
 
   if (!delivery) return <p className="text-center mt-4">Delivery not found.</p>;
 
   const handleAcceptDelivery = () => {
-    if (!riderId.trim()) {
-      alert("Please enter your Rider ID first");
+    if (!isConnected || !address || role !== "rider") {
+      alert(
+        "You must be connected and logged in as a rider to accept deliveries."
+      );
       return;
     }
-    acceptDelivery(delivery.id, riderId);
+    acceptDelivery(delivery.id, address);
   };
 
   const handleCompleteDelivery = () => {
@@ -75,6 +77,11 @@ export default function DeliveryDetails() {
             </span>
           </div>
 
+          <div className="flex justify-between items-center">
+            <span className="font-semibold">Sender:</span>
+            <span className="font-mono text-sm">{delivery.senderId}</span>
+          </div>
+
           {delivery.riderId && (
             <div className="flex justify-between items-center">
               <span className="font-semibold">Assigned Rider:</span>
@@ -85,43 +92,40 @@ export default function DeliveryDetails() {
 
         {/* Action Buttons */}
         <div className="border-t pt-6">
-          {delivery.status === "Created" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Accept This Delivery</h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter your Rider ID"
-                  value={riderId}
-                  onChange={(e) => setRiderId(e.target.value)}
-                  className="flex-1 p-2 border rounded"
-                />
+          {delivery.status === "Created" &&
+            role === "rider" &&
+            isConnected &&
+            address && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Accept This Delivery</h3>
                 <button
                   onClick={handleAcceptDelivery}
                   className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
                   Accept
                 </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {delivery.status === "Accepted" && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Manage Delivery</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCompleteDelivery}
-                  className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-                  Mark as Completed
-                </button>
-                <button
-                  onClick={handleDisputeDelivery}
-                  className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700">
-                  Report Dispute
-                </button>
+          {delivery.status === "Accepted" &&
+            role === "rider" &&
+            isConnected &&
+            address === delivery.riderId && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Manage Delivery</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCompleteDelivery}
+                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                    Mark as Completed
+                  </button>
+                  <button
+                    onClick={handleDisputeDelivery}
+                    className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700">
+                    Report Dispute
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {delivery.status === "Completed" && (
             <div className="bg-green-50 p-4 rounded-lg">
